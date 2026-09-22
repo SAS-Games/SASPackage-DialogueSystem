@@ -1,0 +1,14 @@
+{
+  "name": "SAS.DialogueSystem.Sample",
+  "rootNamespace": "SAS.DialogueSystem.Samples",
+  "references": ["SAS.DialogueSystem.Runtime"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

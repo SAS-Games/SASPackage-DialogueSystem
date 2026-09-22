@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 666d39e0c5eb0d349b04d28a1ab8d724, type: 3}
+  m_Name: Sample Image Key Map
+  m_EditorClassIdentifier:
+  m_ImageKeyMap:
+  - key: guide_happy
+    value: {fileID: 21300000, guid: e76a299f182745179843cb7eccfe5759, type: 3}
+  - key: guide_neutral
+    value: {fileID: 21300000, guid: 3e23c44051314fb796d3be697613387d, type: 3}
+  - key: traveler_happy
+    value: {fileID: 21300000, guid: ac596cb0e45c429e90ce290b8395d9ce, type: 3}
+  - key: traveler_neutral
+    value: {fileID: 21300000, guid: 26972c18bafd4d1ca24b5938db94be53, type: 3}

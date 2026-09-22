@@ -1,0 +1,165 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+public enum DialogueMetadataSeverity
+{
+    Warning,
+    Error
+}
+
+public enum DialogueStorySkipDirective
+{
+    Unchanged,
+    Enable,
+    Disable
+}
+
+public sealed class DialogueMetadataDiagnostic
+{
+    public DialogueMetadataDiagnostic(DialogueMetadataSeverity severity, string code, string message, string key = null)
+    {
+        Severity = severity;
+        Code = code ?? string.Empty;
+        Message = message ?? string.Empty;
+        Key = key ?? string.Empty;
+    }
+
+    public DialogueMetadataSeverity Severity { get; }
+    public string Code { get; }
+    public string Message { get; }
+    public string Key { get; }
+}
+
+public sealed class DialogueParticipant
+{
+    public DialogueParticipant(string role, string characterId, string displayName = null, string portraitKey = null, string animationKey = null)
+    {
+        Role = role?.Trim() ?? string.Empty;
+        CharacterId = characterId?.Trim() ?? string.Empty;
+        DisplayName = displayName?.Trim() ?? string.Empty;
+        PortraitKey = portraitKey?.Trim() ?? string.Empty;
+        AnimationKey = animationKey?.Trim() ?? string.Empty;
+    }
+
+    public string Role { get; }
+    public string CharacterId { get; }
+    public string DisplayName { get; }
+    public string PortraitKey { get; }
+    public string AnimationKey { get; }
+}
+
+public sealed class DialogueLineContext
+{
+    private readonly List<string> _rawTags;
+    private readonly Dictionary<string, List<string>> _tags = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<DialogueParticipant> _participants = new();
+    private readonly Dictionary<string, DialogueParticipant> _participantsByRole = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<DialogueMetadataDiagnostic> _diagnostics = new();
+    private readonly string _currentSpeakerRole;
+    private readonly string _listenerRole;
+
+    internal DialogueLineContext(string text, IEnumerable<string> rawTags, string currentSpeakerRole, string listenerRole)
+    {
+        Text = text ?? string.Empty;
+        _rawTags = rawTags?.ToList() ?? new List<string>();
+        _currentSpeakerRole = currentSpeakerRole?.Trim() ?? string.Empty;
+        _listenerRole = listenerRole?.Trim() ?? string.Empty;
+    }
+
+    public string Text { get; }
+    public IReadOnlyList<string> RawTags => _rawTags;
+    public IReadOnlyDictionary<string, List<string>> Tags => _tags;
+    public IReadOnlyList<DialogueParticipant> Participants => _participants;
+    public IReadOnlyList<DialogueMetadataDiagnostic> Diagnostics => _diagnostics;
+    public bool HasErrors => _diagnostics.Any(item => item.Severity == DialogueMetadataSeverity.Error);
+    public string LineId { get; private set; } = string.Empty;
+    public string CurrentSpeakerRole => _currentSpeakerRole;
+    public string ListenerRole => _listenerRole;
+    public string CurrentSpeakerId => GetParticipantId(_currentSpeakerRole);
+    public string ListenerId => GetParticipantId(_listenerRole);
+    public string Locale { get; private set; } = string.Empty;
+    public string LayoutAnim { get; private set; } = string.Empty;
+    public string AudioInfoId { get; private set; } = string.Empty;
+    public DialogueStorySkipDirective StorySkipDirective { get; private set; }
+
+    internal void SetParticipant(DialogueParticipant participant)
+    {
+        if (participant == null || string.IsNullOrWhiteSpace(participant.Role) || string.IsNullOrWhiteSpace(participant.CharacterId))
+        {
+            return;
+        }
+
+        if (_participantsByRole.TryGetValue(participant.Role, out var existing))
+        {
+            var index = _participants.IndexOf(existing);
+            if (index >= 0)
+                _participants[index] = participant;
+        }
+        else
+            _participants.Add(participant);
+
+        _participantsByRole[participant.Role] = participant;
+    }
+
+    internal void SetLineId(string lineId) => LineId = lineId?.Trim() ?? string.Empty;
+    internal void SetLocale(string locale) => Locale = locale?.Trim() ?? string.Empty;
+    internal void SetLayoutAnim(string layoutAnim) => LayoutAnim = layoutAnim?.Trim() ?? string.Empty;
+    internal void SetAudioInfo(string audioInfoId) => AudioInfoId = audioInfoId?.Trim() ?? string.Empty;
+    internal void SetStorySkipDirective(DialogueStorySkipDirective directive) => StorySkipDirective = directive;
+
+    internal void AddTag(string key, string value)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        key = key.Trim();
+        if (!_tags.TryGetValue(key, out var values))
+        {
+            values = new List<string>();
+            _tags[key] = values;
+        }
+
+        values.Add(value?.Trim() ?? string.Empty);
+    }
+
+    internal void AddDiagnostic(DialogueMetadataDiagnostic diagnostic)
+    {
+        if (diagnostic != null)
+            _diagnostics.Add(diagnostic);
+    }
+
+    public bool HasTag(string key)
+    {
+        return !string.IsNullOrWhiteSpace(key) && _tags.ContainsKey(key.Trim());
+    }
+
+    public bool TryGetTagValue(string key, out string value)
+    {
+        value = string.Empty;
+        if (string.IsNullOrWhiteSpace(key) || !_tags.TryGetValue(key.Trim(), out var values) || values.Count == 0)
+            return false;
+
+        value = values[values.Count - 1];
+        return true;
+    }
+
+    public IReadOnlyList<string> GetTagValues(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key) || !_tags.TryGetValue(key.Trim(), out var values))
+            return Array.Empty<string>();
+
+        return values;
+    }
+
+    public string GetParticipantId(string role)
+    {
+        return TryGetParticipant(role, out var participant) ? participant.CharacterId : string.Empty;
+    }
+
+    public bool TryGetParticipant(string role, out DialogueParticipant participant)
+    {
+        participant = null;
+        return !string.IsNullOrWhiteSpace(role) && _participantsByRole.TryGetValue(role.Trim(), out participant);
+    }
+}

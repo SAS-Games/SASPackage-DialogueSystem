@@ -1,0 +1,15 @@
+{
+  "name": "SAS.DialogueSystem.Tests.Editor",
+  "rootNamespace": "SAS.DialogueSystem.Tests",
+  "references": ["SAS.DialogueSystem.Runtime", "Ink-Libraries"],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "noEngineReferences": false
+}

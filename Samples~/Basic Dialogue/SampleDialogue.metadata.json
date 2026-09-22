@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 2,
+  "tags": {
+    "speaker": {"values": ["guide", "traveler"], "contexts": ["dialogue"]},
+    "speaker_name": {"label": "Speaker Name", "values": ["Guide", "Traveler"], "contexts": ["dialogue"]},
+    "listener": {"values": ["guide", "traveler"], "contexts": ["dialogue"]},
+    "listener_name": {"label": "Listener Name", "values": ["Guide", "Traveler"], "contexts": ["dialogue"]},
+    "portrait": {"values": ["guide_happy", "guide_neutral", "traveler_happy", "traveler_neutral"], "contexts": ["dialogue"]},
+    "listener_portrait": {"label": "Listener Portrait", "values": ["guide_happy", "guide_neutral", "traveler_happy", "traveler_neutral"], "contexts": ["dialogue"]},
+    "animation": {"values": ["Active", "Passive"], "contexts": ["dialogue"]},
+    "listener_animation": {"label": "Listener Animation", "values": ["Active", "Passive"], "contexts": ["dialogue"]},
+    "mood": {"label": "Mood", "values": ["friendly", "curious"], "contexts": ["dialogue", "choice"]},
+    "analytics_event": {"label": "Analytics Event", "contexts": ["choice"]}
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "com.sas.dialogue-system",
+  "version": "0.2.0",
+  "displayName": "SAS Dialogue System",
+  "description": "A reusable Ink-powered dialogue runtime with metadata-driven speakers, portraits, animation, localization, choices, and optional global-variable persistence.",
+  "unity": "2022.3",
+  "author": {"name": "SAS", "email": "sonkar.abhi86@gmail.com"},
+  "keywords": ["dialogue", "ink", "inky", "narrative", "localization"],
+  "dependencies": {
+    "com.inkle.ink-unity-integration": "1.2.1",
+    "com.sas.core": "1.0.0",
+    "com.unity.inputsystem": "1.6.3",
+    "com.unity.localization": "1.5.0",
+    "com.unity.ugui": "1.0.0"
+  },
+  "samples": [{
+    "displayName": "Basic Dialogue",
+    "description": "A ready-to-play tagged Ink conversation with reusable uGUI prefabs and placeholder portraits.",
+    "path": "Samples~/Basic Dialogue"
+  }]
+}
