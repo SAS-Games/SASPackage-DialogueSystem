@@ -40,6 +40,8 @@ The sample uses direct component discovery and does not require a project-specif
 | Layout animation | `layout` |
 | Audio profile | `audio` |
 | Story skip permission | `skip` |
+| Character placement mode | `placement` |
+| Character assigned to a visual slot | `slot.<slot-id>` |
 | Active speaker | `speaker` |
 | Speaker name | `speaker_name` |
 | Speaker portrait | `portrait` |
@@ -52,6 +54,29 @@ The sample uses direct component discovery and does not require a project-specif
 Additional roles use `participant.<role>`, with optional `.name`, `.portrait`, and `.animation` fields. Unmapped `key:value` tags remain available through `DialogueLineContext.TryGetTagValue`. A `DialogueMetadataProfile` can map project-owned names such as `actor`, `face`, or `loc_key` onto the same runtime semantics.
 
 ## Customized Inky workflow
+
+## Metadata-driven character placement
+
+Existing stories use `follow-speaker`: the `speaker` role uses the primary/left view and the `listener` role uses the secondary/right view. No migration is required.
+
+Use `fixed-character` when character positions should remain stable while the active speaker changes:
+
+```ink
+# placement:fixed-character
+# slot.left:guide
+# slot.right:traveler
+# speaker:guide
+# listener:traveler
+Welcome.
+
+# speaker:traveler
+# listener:guide
+I stay on the right while speaking.
+```
+
+Placement mode and slot assignments persist for the dialogue session. `# slot.right:clear` empties a slot. If fixed placement omits explicit slot tags, participants are pinned on first appearance to the profile's auto-placement order (`left`, `right`, then `center` by default).
+
+`SpeakerPresenter` routes resolved participants by slot ID. Its child fallback maps the first view to both `speaker` and `left`, the second to both `listener` and `right`, and the third to `center`. Existing prefabs therefore keep working, while custom prefabs can explicitly map arbitrary slot IDs in **Participant Slots**.
 
 The customized Inky editor adds a metadata inspector but still writes standard Ink tags and uses the official compiler. It is an authoring companion, not a runtime dependency.
 

@@ -78,5 +78,29 @@ namespace SAS.DialogueSystem.Tests
             Assert.IsTrue(invalid.Diagnostics.Any(item => item.Code == "invalid-skip-directive"));
             Assert.IsFalse(invalid.HasErrors);
         }
+
+        [Test]
+        public void PlacementAndSlotMetadataAreParsedAndValidated()
+        {
+            var line = DialogueMetadataParser.ParseLine(
+                "Stay where you are.",
+                new[]
+                {
+                    "placement:fixed-character", "slot.left:alice", "slot.right:clear",
+                    "speaker:alice", "listener:bob"
+                },
+                DialogueMetadataSchema.Canonical);
+            var invalid = DialogueMetadataParser.ParseLine(
+                "Malformed.",
+                new[] { "placement:teleport", "slot.bad.value:alice", "slot.left:not valid" },
+                DialogueMetadataSchema.Canonical);
+
+            Assert.AreEqual(DialoguePlacementDirective.FixedCharacter, line.PlacementDirective);
+            Assert.AreEqual("alice", line.SlotAssignments["left"]);
+            Assert.AreEqual(string.Empty, line.SlotAssignments["right"]);
+            Assert.IsTrue(invalid.Diagnostics.Any(item => item.Code == "invalid-placement-directive"));
+            Assert.IsTrue(invalid.Diagnostics.Any(item => item.Code == "invalid-slot-id"));
+            Assert.IsTrue(invalid.Diagnostics.Any(item => item.Code == "invalid-slot-character"));
+        }
     }
 }

@@ -52,6 +52,10 @@ public sealed class DialogueMetadataProfile : ScriptableObject
     [SerializeField] private string m_LayoutTag = "layout";
     [SerializeField] private string m_AudioTag = "audio";
     [SerializeField] private string m_StorySkipTag = "skip";
+    [SerializeField] private string m_PlacementTag = "placement";
+    [SerializeField] private string m_SlotPrefix = "slot.";
+    [SerializeField] private List<string> m_AutoPlacementSlots = new() { "left", "right", "center" };
+
 
     [Header("Participant semantics")] [Tooltip("Participant role exposed as CurrentSpeakerId.")] [SerializeField]
     private string m_CurrentSpeakerRole = "speaker";
@@ -72,9 +76,12 @@ public sealed class DialogueMetadataProfile : ScriptableObject
 
     public DialogueMetadataSchema GetSchema()
     {
-        return _cachedSchema ??= new DialogueMetadataSchema(m_LineIdTag, m_LocalizationTag, m_LayoutTag, m_AudioTag, m_CurrentSpeakerRole, m_ListenerRole, (m_Participants ?? new List<DialogueParticipantTagBinding>())
-            .Where(binding => binding != null)
-            .Select(binding => binding.BuildSchema()), (m_GenericParticipants ?? new DialogueGenericParticipantTagBinding()).BuildSchema(), m_StorySkipTag);
+        return _cachedSchema ??= new DialogueMetadataSchema(m_LineIdTag, m_LocalizationTag, m_LayoutTag,
+            m_AudioTag, m_CurrentSpeakerRole, m_ListenerRole, (m_Participants ?? new List<DialogueParticipantTagBinding>())
+                .Where(binding => binding != null)
+                .Select(binding => binding.BuildSchema()),
+            (m_GenericParticipants ?? new DialogueGenericParticipantTagBinding()).BuildSchema(),
+            m_StorySkipTag, m_PlacementTag, m_SlotPrefix, m_AutoPlacementSlots);
     }
 
     private void OnValidate()
@@ -125,15 +132,24 @@ public sealed class DialogueGenericParticipantTagSchema
 public sealed class DialogueMetadataSchema
 {
     private static readonly Lazy<DialogueMetadataSchema> CanonicalSchema = new(CreateCanonical);
+    private readonly IReadOnlyList<string> _autoPlacementSlots;
     private readonly IReadOnlyList<DialogueParticipantTagSchema> _participants;
 
-    public DialogueMetadataSchema(string lineIdTag, string localizationTag, string layoutTag, string audioTag, string currentSpeakerRole, string listenerRole, IEnumerable<DialogueParticipantTagSchema> participants, DialogueGenericParticipantTagSchema genericParticipants = null, string storySkipTag = "skip")
+    public DialogueMetadataSchema(string lineIdTag, string localizationTag, string layoutTag, string audioTag,
+        string currentSpeakerRole, string listenerRole, IEnumerable<DialogueParticipantTagSchema> participants,
+        DialogueGenericParticipantTagSchema genericParticipants = null, string storySkipTag = "skip",
+        string placementTag = "placement", string slotPrefix = "slot.", IEnumerable<string> autoPlacementSlots = null)
     {
         LineIdTag = Trim(lineIdTag);
         LocalizationTag = Trim(localizationTag);
         LayoutTag = Trim(layoutTag);
         AudioTag = Trim(audioTag);
         StorySkipTag = Trim(storySkipTag);
+        PlacementTag = Trim(placementTag);
+        SlotPrefix = Trim(slotPrefix);
+        _autoPlacementSlots = (autoPlacementSlots ?? new[] { "left", "right", "center" })
+            .Select(Trim)
+            .ToList().AsReadOnly();
         CurrentSpeakerRole = Trim(currentSpeakerRole);
         ListenerRole = Trim(listenerRole);
         _participants = (participants ?? Enumerable.Empty<DialogueParticipantTagSchema>())
@@ -154,6 +170,9 @@ public sealed class DialogueMetadataSchema
     public string LayoutTag { get; }
     public string AudioTag { get; }
     public string StorySkipTag { get; }
+    public string PlacementTag { get; }
+    public string SlotPrefix { get; }
+    public IReadOnlyList<string> AutoPlacementSlots => _autoPlacementSlots;
     public string CurrentSpeakerRole { get; }
     public string ListenerRole { get; }
     public IReadOnlyList<DialogueParticipantTagSchema> Participants => _participants;
@@ -182,6 +201,20 @@ public sealed class DialogueMetadataSchema
         foreach (var error in ValidateOptionalTag(LayoutTag, "Layout", tags)) yield return error;
         foreach (var error in ValidateOptionalTag(AudioTag, "Audio", tags)) yield return error;
         foreach (var error in ValidateOptionalTag(StorySkipTag, "Story skip", tags)) yield return error;
+        foreach (var error in ValidateOptionalTag(PlacementTag, "Placement", tags)) yield return error;
+
+        if (!IsValidGenericPrefix(SlotPrefix))
+            yield return "Slot prefix must be a valid tag prefix ending in '.'.";
+
+        var slots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var slot in AutoPlacementSlots)
+        {
+            if (!IsValidRole(slot))
+                yield return $"Auto-placement slot '{slot}' is invalid.";
+            else if (!slots.Add(slot))
+                yield return $"Auto-placement slot '{slot}' is configured more than once.";
+        }
+
 
         if (!string.IsNullOrEmpty(CurrentSpeakerRole) && !IsValidRole(CurrentSpeakerRole))
             yield return $"Current speaker role '{CurrentSpeakerRole}' is invalid.";
@@ -273,6 +306,7 @@ public sealed class DialogueMetadataSchema
                 new DialogueParticipantTagSchema("speaker", "speaker", "speaker_name", "portrait", "animation"),
                 new DialogueParticipantTagSchema("listener", "listener", "listener_name", "listener_portrait", "listener_animation")
             },
-            new DialogueGenericParticipantTagSchema(true, "participant.", ".name", ".portrait", ".animation"), "skip");
+            new DialogueGenericParticipantTagSchema(true, "participant.", ".name", ".portrait", ".animation"),
+            "skip", "placement", "slot.", new[] { "left", "right", "center" });
     }
 }

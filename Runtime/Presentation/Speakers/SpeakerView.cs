@@ -55,15 +55,31 @@ public class SpeakerView : MonoBehaviour
         if (participant == null)
             return;
 
-        SetName(string.IsNullOrEmpty(participant.DisplayName)
-            ? participant.CharacterId
-            : participant.DisplayName);
-        SetImage(string.IsNullOrEmpty(participant.PortraitKey)
-            ? participant.CharacterId
-            : participant.PortraitKey);
-        SetAnimationState(string.IsNullOrEmpty(participant.AnimationKey)
+        ApplyParticipant(participant.CharacterId, participant.DisplayName, participant.PortraitKey,
+            participant.AnimationKey);
+    }
+
+    public void SetParticipant(DialoguePresentationParticipant participant)
+    {
+        if (participant == null)
+            return;
+
+        ApplyParticipant(participant.CharacterId, participant.DisplayName, participant.PortraitKey,
+            participant.AnimationKey);
+    }
+
+    private void ApplyParticipant(string characterId, string displayName, string portraitKey,
+        string animationKey)
+    {
+        SetName(string.IsNullOrEmpty(displayName)
+            ? characterId
+            : displayName);
+        SetImage(string.IsNullOrEmpty(portraitKey)
+            ? characterId
+            : portraitKey);
+        SetAnimationState(string.IsNullOrEmpty(animationKey)
             ? m_DefaultAnimationState
-            : participant.AnimationKey);
+            : animationKey);
     }
 
     internal void SetDisplayValues(string speakerTag, string animationState)

@@ -29,7 +29,9 @@ public static class DialogueMetadataParser
         }
 
         ApplyScalarMetadata(lineContext, schema);
+        ApplySlotAssignments(lineContext, schema);
         ApplyParticipants(lineContext, schema);
+        lineContext.ResolveRoleBasedPresentation();
     }
 
     private static void ApplyScalarMetadata(DialogueLineContext lineContext, DialogueMetadataSchema schema)
@@ -39,6 +41,7 @@ public static class DialogueMetadataParser
         ApplyScalar(lineContext, schema.LayoutTag, lineContext.SetLayoutAnim, validateIdentifier: false);
         ApplyScalar(lineContext, schema.AudioTag, lineContext.SetAudioInfo, validateIdentifier: false);
         ApplyStorySkipDirective(lineContext, schema.StorySkipTag);
+        ApplyPlacementDirective(lineContext, schema.PlacementTag);
     }
 
     private static void ApplyStorySkipDirective(DialogueLineContext lineContext, string key)
@@ -66,6 +69,69 @@ public static class DialogueMetadataParser
 
         lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Warning, "invalid-skip-directive", $"Metadata '{key}' must be 'enable' or 'disable'.", key));
     }
+
+    private static void ApplyPlacementDirective(DialogueLineContext lineContext, string key)
+    {
+        if (string.IsNullOrEmpty(key))
+            return;
+
+        var values = lineContext.GetTagValues(key);
+        if (values.Count == 0)
+            return;
+
+        AddDuplicateDiagnostic(lineContext, key, values.Count);
+        var value = values[values.Count - 1]?.Trim();
+        if (string.Equals(value, "follow-speaker", StringComparison.OrdinalIgnoreCase))
+        {
+            lineContext.SetPlacementDirective(DialoguePlacementDirective.FollowSpeaker);
+            return;
+        }
+
+        if (string.Equals(value, "fixed-character", StringComparison.OrdinalIgnoreCase))
+        {
+            lineContext.SetPlacementDirective(DialoguePlacementDirective.FixedCharacter);
+            return;
+        }
+
+        lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Warning, "invalid-placement-directive", $"Metadata '{key}' must be 'follow-speaker' or 'fixed-character'.", key));
+    }
+
+    private static void ApplySlotAssignments(DialogueLineContext lineContext, DialogueMetadataSchema schema)
+    {
+        if (string.IsNullOrEmpty(schema.SlotPrefix))
+            return;
+
+        foreach (var key in lineContext.Tags.Keys.Where(item => item.StartsWith(schema.SlotPrefix, StringComparison.OrdinalIgnoreCase)))
+        {
+            var slotId = key.Substring(schema.SlotPrefix.Length).Trim();
+            if (!DialogueMetadataSchema.IsValidRole(slotId))
+            {
+                lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Error, "invalid-slot-id", $"Metadata '{key}' must end with a valid slot ID.", key));
+                continue;
+            }
+
+            var values = lineContext.GetTagValues(key);
+            AddDuplicateDiagnostic(lineContext, key, values.Count);
+            if (values.Count == 0)
+                continue;
+
+            var value = values[values.Count - 1]?.Trim();
+            if (string.Equals(value, "clear", StringComparison.OrdinalIgnoreCase))
+            {
+                lineContext.SetSlotAssignment(slotId, string.Empty);
+                continue;
+            }
+
+            if (!IsValidIdentifier(value))
+            {
+                lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Error, "invalid-slot-character", $"Metadata '{key}' must contain a character ID or 'clear'.", key));
+                continue;
+            }
+
+            lineContext.SetSlotAssignment(slotId, value);
+        }
+    }
+
 
     private static void ApplyScalar(DialogueLineContext lineContext, string key, Action<string> apply, bool validateIdentifier)
     {

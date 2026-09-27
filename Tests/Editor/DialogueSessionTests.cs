@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Ink;
 using NUnit.Framework;
 
@@ -89,6 +90,48 @@ Lock again.
             Assert.IsFalse(session.TrySkipStory());
         }
 
+
+        [Test]
+        public void FixedCharacterPlacementKeepsCharactersInTheirSlotsWhenSpeakerChanges()
+        {
+            var session = CreateSession(@"
+# placement:fixed-character
+# slot.left:alice
+# slot.right:bob
+# speaker:alice
+# listener:bob
+First.
+# speaker:bob
+# listener:alice
+Second.
+-> END
+");
+
+            var first = session.Continue().Line;
+            Assert.AreEqual(DialoguePlacementMode.FixedCharacter, first.PlacementMode);
+            Assert.AreEqual("alice", first.PresentationParticipants.Single(item => item.SlotId == "left").CharacterId);
+            Assert.IsTrue(first.PresentationParticipants.Single(item => item.SlotId == "left").IsCurrentSpeaker);
+            Assert.AreEqual("bob", first.PresentationParticipants.Single(item => item.SlotId == "right").CharacterId);
+
+            session.CompleteLinePresentation(first);
+            var second = session.Continue().Line;
+            Assert.AreEqual("alice", second.PresentationParticipants.Single(item => item.SlotId == "left").CharacterId);
+            Assert.IsFalse(second.PresentationParticipants.Single(item => item.SlotId == "left").IsCurrentSpeaker);
+            Assert.AreEqual("bob", second.PresentationParticipants.Single(item => item.SlotId == "right").CharacterId);
+            Assert.IsTrue(second.PresentationParticipants.Single(item => item.SlotId == "right").IsCurrentSpeaker);
+        }
+
+        [Test]
+        public void LegacyStoriesContinueToRouteBySpeakerAndListenerRoles()
+        {
+            var session = CreateSession("Hello. # speaker:alice # listener:bob\n-> END");
+
+            var line = session.Continue().Line;
+
+            Assert.AreEqual(DialoguePlacementMode.FollowSpeaker, line.PlacementMode);
+            Assert.AreEqual("alice", line.PresentationParticipants.Single(item => item.SlotId == "speaker").CharacterId);
+            Assert.AreEqual("bob", line.PresentationParticipants.Single(item => item.SlotId == "listener").CharacterId);
+        }
         private static DialogueSession CreateSession(string source)
         {
             var story = new Compiler(source).Compile();

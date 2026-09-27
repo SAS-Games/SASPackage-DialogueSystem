@@ -10,6 +10,7 @@ public class SpeakerPresenter : MonoBehaviour
     [Serializable]
     private class ParticipantSlot
     {
+        [Tooltip("Presentation slot ID, such as left, right, center, speaker, or listener.")]
         public string role;
         public SpeakerView view;
     }
@@ -18,8 +19,15 @@ public class SpeakerPresenter : MonoBehaviour
 
     [FieldRequiresParent] protected DialogueHandler _dialogueHandler;
 
-    private readonly Dictionary<string, SpeakerView> _viewsByRole = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _reportedMissingRoles = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly string[][] FallbackSlotGroups =
+    {
+        new[] { "speaker", "left" },
+        new[] { "listener", "right" },
+        new[] { "center" }
+    };
+
+    private readonly Dictionary<string, SpeakerView> _viewsBySlot = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _reportedMissingSlots = new(StringComparer.OrdinalIgnoreCase);
 
     void Awake()
     {
@@ -42,31 +50,65 @@ public class SpeakerPresenter : MonoBehaviour
             if (string.IsNullOrWhiteSpace(slot.role) || slot.view == null)
                 continue;
 
-            var role = slot.role.Trim();
-            if (_viewsByRole.ContainsKey(role))
-                Debug.LogWarning($"Duplicate dialogue participant slot for role '{role}'. The final slot is used.",
-                    this);
-            _viewsByRole[role] = slot.view;
+            var slotId = slot.role.Trim();
+            if (_viewsBySlot.ContainsKey(slotId))
+                Debug.LogWarning($"Duplicate dialogue presentation slot '{slotId}'. The final slot is used.", this);
+            _viewsBySlot[slotId] = slot.view;
+        }
+
+        RegisterMissingAliases();
+    }
+
+    private void RegisterMissingAliases()
+    {
+        foreach (var group in FallbackSlotGroups)
+        {
+            SpeakerView mappedView = null;
+            foreach (var slotId in group)
+            {
+                if (_viewsBySlot.TryGetValue(slotId, out mappedView))
+                    break;
+            }
+
+            if (mappedView == null)
+                continue;
+
+            foreach (var slotId in group)
+            {
+                if (!_viewsBySlot.ContainsKey(slotId))
+                    _viewsBySlot.Add(slotId, mappedView);
+            }
         }
     }
 
     private void RegisterChildSlots()
     {
-        var fallbackRoles = new[] { "speaker", "listener" };
         var fallbackIndex = 0;
         foreach (var view in GetComponentsInChildren<SpeakerView>(true))
         {
-            if (_viewsByRole.ContainsValue(view))
+            if (_viewsBySlot.ContainsValue(view))
                 continue;
 
-            while (fallbackIndex < fallbackRoles.Length && _viewsByRole.ContainsKey(fallbackRoles[fallbackIndex]))
+            while (fallbackIndex < FallbackSlotGroups.Length && HasMappedSlot(FallbackSlotGroups[fallbackIndex]))
                 fallbackIndex++;
-            if (fallbackIndex >= fallbackRoles.Length)
+            if (fallbackIndex >= FallbackSlotGroups.Length)
                 break;
 
-            _viewsByRole.Add(fallbackRoles[fallbackIndex], view);
+            foreach (var slotId in FallbackSlotGroups[fallbackIndex])
+                _viewsBySlot.Add(slotId, view);
             fallbackIndex++;
         }
+    }
+
+    private bool HasMappedSlot(IEnumerable<string> slotIds)
+    {
+        foreach (var slotId in slotIds)
+        {
+            if (_viewsBySlot.ContainsKey(slotId))
+                return true;
+        }
+
+        return false;
     }
 
     void OnDestroy()
@@ -80,16 +122,15 @@ public class SpeakerPresenter : MonoBehaviour
         if (lineContext == null)
             return;
 
-        foreach (var view in _viewsByRole.Values)
+        foreach (var view in new HashSet<SpeakerView>(_viewsBySlot.Values))
             view.gameObject.SetActive(false);
 
-        foreach (var participant in lineContext.Participants)
+        foreach (var participant in lineContext.PresentationParticipants)
         {
-            if (!_viewsByRole.TryGetValue(participant.Role, out var view))
+            if (!_viewsBySlot.TryGetValue(participant.SlotId, out var view))
             {
-                if (_reportedMissingRoles.Add(participant.Role))
-                    Debug.LogWarning($"Dialogue participant slot for role '{participant.Role}' is not configured.",
-                        this);
+                if (_reportedMissingSlots.Add(participant.SlotId))
+                    Debug.LogWarning($"Dialogue presentation slot '{participant.SlotId}' is not configured.", this);
                 continue;
             }
 

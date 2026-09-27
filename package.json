@@ -1,6 +1,6 @@
 {
   "name": "com.sas.dialogue-system",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "displayName": "SAS Dialogue System",
   "description": "A reusable Ink-powered dialogue runtime with metadata-driven speakers, portraits, animation, localization, choices, and optional global-variable persistence.",
   "unity": "2022.3",

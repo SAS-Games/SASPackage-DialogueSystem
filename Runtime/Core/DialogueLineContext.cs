@@ -15,6 +15,19 @@ public enum DialogueStorySkipDirective
     Disable
 }
 
+public enum DialoguePlacementMode
+{
+    FollowSpeaker,
+    FixedCharacter
+}
+
+public enum DialoguePlacementDirective
+{
+    Unchanged,
+    FollowSpeaker,
+    FixedCharacter
+}
+
 public sealed class DialogueMetadataDiagnostic
 {
     public DialogueMetadataDiagnostic(DialogueMetadataSeverity severity, string code, string message, string key = null)
@@ -49,12 +62,38 @@ public sealed class DialogueParticipant
     public string AnimationKey { get; }
 }
 
+public sealed class DialoguePresentationParticipant
+{
+    public DialoguePresentationParticipant(string slotId, string characterId, bool isCurrentSpeaker,
+        string displayName = null, string portraitKey = null, string animationKey = null,
+        string sourceRole = null)
+    {
+        SlotId = slotId?.Trim() ?? string.Empty;
+        CharacterId = characterId?.Trim() ?? string.Empty;
+        IsCurrentSpeaker = isCurrentSpeaker;
+        DisplayName = displayName?.Trim() ?? string.Empty;
+        PortraitKey = portraitKey?.Trim() ?? string.Empty;
+        AnimationKey = animationKey?.Trim() ?? string.Empty;
+        SourceRole = sourceRole?.Trim() ?? string.Empty;
+    }
+
+    public string SlotId { get; }
+    public string CharacterId { get; }
+    public bool IsCurrentSpeaker { get; }
+    public string DisplayName { get; }
+    public string PortraitKey { get; }
+    public string AnimationKey { get; }
+    public string SourceRole { get; }
+}
+
 public sealed class DialogueLineContext
 {
     private readonly List<string> _rawTags;
     private readonly Dictionary<string, List<string>> _tags = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<DialogueParticipant> _participants = new();
     private readonly Dictionary<string, DialogueParticipant> _participantsByRole = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _slotAssignments = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<DialoguePresentationParticipant> _presentationParticipants = new();
     private readonly List<DialogueMetadataDiagnostic> _diagnostics = new();
     private readonly string _currentSpeakerRole;
     private readonly string _listenerRole;
@@ -71,6 +110,8 @@ public sealed class DialogueLineContext
     public IReadOnlyList<string> RawTags => _rawTags;
     public IReadOnlyDictionary<string, List<string>> Tags => _tags;
     public IReadOnlyList<DialogueParticipant> Participants => _participants;
+    public IReadOnlyDictionary<string, string> SlotAssignments => _slotAssignments;
+    public IReadOnlyList<DialoguePresentationParticipant> PresentationParticipants => _presentationParticipants;
     public IReadOnlyList<DialogueMetadataDiagnostic> Diagnostics => _diagnostics;
     public bool HasErrors => _diagnostics.Any(item => item.Severity == DialogueMetadataSeverity.Error);
     public string LineId { get; private set; } = string.Empty;
@@ -82,13 +123,13 @@ public sealed class DialogueLineContext
     public string LayoutAnim { get; private set; } = string.Empty;
     public string AudioInfoId { get; private set; } = string.Empty;
     public DialogueStorySkipDirective StorySkipDirective { get; private set; }
+    public DialoguePlacementDirective PlacementDirective { get; private set; }
+    public DialoguePlacementMode PlacementMode { get; private set; } = DialoguePlacementMode.FollowSpeaker;
 
     internal void SetParticipant(DialogueParticipant participant)
     {
         if (participant == null || string.IsNullOrWhiteSpace(participant.Role) || string.IsNullOrWhiteSpace(participant.CharacterId))
-        {
             return;
-        }
 
         if (_participantsByRole.TryGetValue(participant.Role, out var existing))
         {
@@ -107,6 +148,30 @@ public sealed class DialogueLineContext
     internal void SetLayoutAnim(string layoutAnim) => LayoutAnim = layoutAnim?.Trim() ?? string.Empty;
     internal void SetAudioInfo(string audioInfoId) => AudioInfoId = audioInfoId?.Trim() ?? string.Empty;
     internal void SetStorySkipDirective(DialogueStorySkipDirective directive) => StorySkipDirective = directive;
+    internal void SetPlacementDirective(DialoguePlacementDirective directive) => PlacementDirective = directive;
+
+    internal void SetSlotAssignment(string slotId, string characterId)
+    {
+        if (!string.IsNullOrWhiteSpace(slotId))
+            _slotAssignments[slotId.Trim()] = characterId?.Trim() ?? string.Empty;
+    }
+
+    internal void SetPresentation(DialoguePlacementMode placementMode,
+        IEnumerable<DialoguePresentationParticipant> participants)
+    {
+        PlacementMode = placementMode;
+        _presentationParticipants.Clear();
+        if (participants != null)
+            _presentationParticipants.AddRange(participants.Where(item => item != null));
+    }
+
+    internal void ResolveRoleBasedPresentation()
+    {
+        SetPresentation(DialoguePlacementMode.FollowSpeaker, _participants.Select(participant =>
+            new DialoguePresentationParticipant(participant.Role, participant.CharacterId,
+                participant.Role.Equals(_currentSpeakerRole, StringComparison.OrdinalIgnoreCase),
+                participant.DisplayName, participant.PortraitKey, participant.AnimationKey, participant.Role)));
+    }
 
     internal void AddTag(string key, string value)
     {

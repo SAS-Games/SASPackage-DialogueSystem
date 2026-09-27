@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 - 2026-09-27
+
+- Added metadata-driven `follow-speaker` and persistent `fixed-character` placement modes.
+- Added `slot.<slot-id>` assignments, `clear` support, automatic first-appearance placement, and diagnostics.
+- Decoupled active-speaker identity from visual slots through resolved presentation participants.
+- Updated `SpeakerPresenter`, tests, documentation, and the Basic Dialogue sample for stable left/right positions.
+
 ## 0.2.0 - 2026-09-21
 
 - Added `skip:enable` and `skip:disable` Ink metadata directives.

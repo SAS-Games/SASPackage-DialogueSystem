@@ -16,6 +16,13 @@ MonoBehaviour:
   m_LocalizationTag: locale
   m_LayoutTag: layout
   m_AudioTag: audio
+  m_StorySkipTag: skip
+  m_PlacementTag: placement
+  m_SlotPrefix: slot.
+  m_AutoPlacementSlots:
+  - left
+  - right
+  - center
   m_CurrentSpeakerRole: speaker
   m_ListenerRole: listener
   m_Participants:

@@ -1,6 +1,9 @@
 {
   "schemaVersion": 2,
   "tags": {
+    "placement": {"label": "Character Placement", "contexts": ["dialogue"]},
+    "slot.left": {"label": "Left Slot", "values": ["guide", "traveler", "clear"], "contexts": ["dialogue"]},
+    "slot.right": {"label": "Right Slot", "values": ["guide", "traveler", "clear"], "contexts": ["dialogue"]},
     "speaker": {"values": ["guide", "traveler"], "contexts": ["dialogue"]},
     "speaker_name": {"label": "Speaker Name", "values": ["Guide", "Traveler"], "contexts": ["dialogue"]},
     "listener": {"values": ["guide", "traveler"], "contexts": ["dialogue"]},

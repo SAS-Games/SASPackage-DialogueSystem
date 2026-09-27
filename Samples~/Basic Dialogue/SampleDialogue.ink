@@ -3,6 +3,9 @@
 === introduction ===
 
 # id:sample.guide.welcome
+# placement:fixed-character
+# slot.left:guide
+# slot.right:traveler
 # speaker:guide
 # speaker_name:Guide
 # portrait:guide_happy
