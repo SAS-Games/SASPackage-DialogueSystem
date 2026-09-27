@@ -2,6 +2,8 @@
 
 An Ink-powered Unity dialogue runtime. Ink remains the narrative source of truth; ordinary Ink tags are parsed into stable runtime metadata for speakers, listeners, portraits, animation, audio, layout, localization, and project-defined fields.
 
+For authoring syntax, every built-in tag, Unity setup, custom tags, and runtime APIs, see the [Dialogue Metadata Reference](Documentation~/MetadataReference.md).
+
 ## Requirements
 
 - Unity 2022.3 or newer
@@ -15,7 +17,7 @@ Ink Unity Integration and SAS Core are Git packages in the SAS projects. Install
 
 1. Add the package to the project.
 2. In Package Manager, import **Basic Dialogue** from the Samples tab.
-3. Open `Assets/Samples/SAS Dialogue System/0.2.0/Basic Dialogue/Basic Dialogue.unity`.
+3. Open the imported `Basic Dialogue.unity` scene under `Assets/Samples/SAS Dialogue System/<package version>/Basic Dialogue`.
 4. Enter Play Mode.
 5. Press Space to reveal or advance text. Use the mouse or UI navigation to choose a response.
 
@@ -52,6 +54,8 @@ The sample uses direct component discovery and does not require a project-specif
 | Listener animation | `listener_animation` |
 
 Additional roles use `participant.<role>`, with optional `.name`, `.portrait`, and `.animation` fields. Unmapped `key:value` tags remain available through `DialogueLineContext.TryGetTagValue`. A `DialogueMetadataProfile` can map project-owned names such as `actor`, `face`, or `loc_key` onto the same runtime semantics.
+
+The complete behavior, allowed values, setup requirements, choice syntax, and extension examples are documented in the [Dialogue Metadata Reference](Documentation~/MetadataReference.md).
 
 ## Customized Inky workflow
 
