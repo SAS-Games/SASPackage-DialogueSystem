@@ -128,7 +128,7 @@ MonoBehaviour:
   m_DisplayNameText: {fileID: 7319878748249143041}
   m_PortraitAnimator: {fileID: 2237598950363057676}
   m_Image: {fileID: 6378888315687748770}
-  m_ImageKeyMapConfig: {fileID: 11400000, guid: c689b208fab74eb492450e1e717363af, type: 2}
+  m_CharacterCatalog: {fileID: 11400000, guid: c689b208fab74eb492450e1e717363af, type: 2}
   m_DefaultAnimationState: Passive
 --- !u!95 &2237598950363057676
 Animator:

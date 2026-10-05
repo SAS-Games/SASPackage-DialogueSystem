@@ -11,8 +11,7 @@ A regular dialogue line uses a contiguous block of Ink tags immediately above th
 ```ink
 # id:intro.guide.welcome
 # speaker:guide
-# speaker_name:Guide
-# portrait:guide_happy
+# portrait:happy
 # animation:Wave
 Welcome to the valley.
 ```
@@ -43,17 +42,17 @@ For a choice, put metadata inside the visible choice brackets. This is necessary
 | `placement` | `follow-speaker` or `fixed-character` | Selects participant placement behavior | Dialogue | `SpeakerPresenter`; fixed/custom slots need corresponding views |
 | `slot.<slot-id>` | Character ID or `clear` | Assigns or clears a persistent visual slot | Dialogue | A matching slot on `SpeakerPresenter` |
 | `speaker` | Character ID | Defines the current speaker participant | Dialogue; available in choice context | `SpeakerPresenter` for visual use |
-| `speaker_name` | Display text | Overrides the current speaker's displayed name | With `speaker` | Speaker view with a name label |
-| `portrait` | Sprite lookup key | Selects the current speaker portrait | With `speaker` | `ImageKeyMapConfig` entry |
-| `animation` | Animator state/key | Selects the current speaker animation | With `speaker` | Matching character UI animation setup |
+| `speaker_name` | Display text | Overrides the catalog display name | With `speaker` | Optional exceptional-case override |
+| `portrait` | Character-scoped portrait key | Overrides the catalog default portrait | With `speaker` | Matching `DialogueCharacterCatalog` portrait entry |
+| `animation` | Animator state/key | Overrides the catalog default animation | With `speaker` | Matching character UI animation setup |
 | `listener` | Character ID | Defines the primary listener participant | Dialogue; available in choice context | `SpeakerPresenter` for visual use |
-| `listener_name` | Display text | Overrides the listener's displayed name | With `listener` | Speaker view with a name label |
-| `listener_portrait` | Sprite lookup key | Selects the listener portrait | With `listener` | `ImageKeyMapConfig` entry |
-| `listener_animation` | Animator state/key | Selects the listener animation | With `listener` | Matching character UI animation setup |
+| `listener_name` | Display text | Overrides the listener's catalog display name | With `listener` | Optional exceptional-case override |
+| `listener_portrait` | Character-scoped portrait key | Overrides the listener's catalog default portrait | With `listener` | Matching `DialogueCharacterCatalog` portrait entry |
+| `listener_animation` | Animator state/key | Overrides the listener's catalog default animation | With `listener` | Matching character UI animation setup |
 | `participant.<role>` | Character ID | Adds a project-defined participant role | Dialogue; available in choice context | A presenter slot when the role must be shown |
-| `participant.<role>.name` | Display text | Overrides that participant's displayed name | With `participant.<role>` | Speaker view with a name label |
-| `participant.<role>.portrait` | Sprite lookup key | Selects that participant's portrait | With `participant.<role>` | `ImageKeyMapConfig` entry |
-| `participant.<role>.animation` | Animator state/key | Selects that participant's animation | With `participant.<role>` | Matching character UI animation setup |
+| `participant.<role>.name` | Display text | Overrides that participant's catalog display name | With `participant.<role>` | Optional exceptional-case override |
+| `participant.<role>.portrait` | Character-scoped portrait key | Overrides that participant's catalog default portrait | With `participant.<role>` | Matching `DialogueCharacterCatalog` portrait entry |
+| `participant.<role>.animation` | Animator state/key | Overrides that participant's catalog default animation | With `participant.<role>` | Matching character UI animation setup |
 | Any other valid key | Project-defined text | Preserved in `DialogueLineContext.Tags` | Dialogue or choice | Game code decides what it means |
 
 The default choice UI directly consumes `locale`. Other choice tags remain available in each `ChoiceOptionContext.LineContext` for custom UI, analytics, requirements, icons, and other integrations. Presentation directives such as `skip`, `placement`, and `slot.*` should be placed on dialogue lines; choice parsing alone does not apply them to the active session.
@@ -161,23 +160,45 @@ A participant contains:
 - an optional portrait key;
 - an optional animation key.
 
+The character ID is the stable link to `DialogueCharacterCatalog`. Normal lines only need the role's character ID. The catalog supplies the display name, optional localized display name, default portrait, character-scoped portrait variations, and default animation. Name, portrait, and animation tags remain available as exceptional per-line overrides.
+
+### Character catalog
+
+Create the catalog from **Assets > Create > Dialogue > Character Catalog** and assign the same asset to each relevant `SpeakerView`. Add one entry per stable character ID. Each entry contains:
+
+- `Id`: the value authored in participant tags such as `speaker:guide`;
+- `Display Name`: the non-localized fallback name;
+- `Localized Display Name`: an optional Unity Localization reference that takes priority over the fallback name;
+- `Default Portrait`: the sprite used when the line has no portrait override;
+- `Default Animation State`: the animation used when the line has no animation override;
+- `Portraits`: character-scoped key-to-sprite variations such as `happy`, `neutral`, or `angry`.
+
+Character IDs and portrait keys are matched case-insensitively. IDs must be unique and use the same identifier rules as participant metadata. The catalog logs configuration warnings for missing, invalid, or duplicate IDs and duplicate portrait keys.
+
+The resolution order is deliberately override-first:
+
+1. Use a name, portrait, or animation supplied by the current line.
+2. Otherwise use the character catalog value.
+3. If no catalog name exists, show the character ID; if no catalog animation exists, use the `SpeakerView` default animation.
+
+This keeps ordinary Ink concise while preserving exceptional labels such as `???`, disguises, player-selected names, or one-line portrait and animation changes.
+
 ### Current speaker
 
 ```ink
 # speaker:guide
-# speaker_name:Village Guide
-# portrait:guide_happy
+# portrait:happy
 # animation:TalkFriendly
 Welcome, traveler.
 ```
 
 `DialogueLineContext.CurrentSpeakerId` returns the character ID assigned to the profile's current-speaker role. In the canonical profile that role is `speaker`.
 
-The visual fallback order in `SpeakerView` is:
+The visual resolution order in `SpeakerView` is:
 
-- name: `speaker_name`, then the character ID;
-- portrait: `portrait`, then the character ID as the image-map key;
-- animation: `animation`, then the view's configured default animation.
+- name: metadata override, localized catalog name, catalog display name, then character ID;
+- portrait: character-scoped metadata portrait, then catalog default portrait;
+- animation: metadata override, catalog default animation, then the view's configured default animation.
 
 Because of these fallbacks, the minimal form is often enough:
 
@@ -190,8 +211,7 @@ Welcome back.
 
 ```ink
 # listener:traveler
-# listener_name:Traveler
-# listener_portrait:traveler_neutral
+# listener_portrait:neutral
 # listener_animation:Listen
 ```
 
@@ -418,7 +438,7 @@ Example:
     },
     "portrait": {
       "label": "Portrait",
-      "values": ["guide_happy", "guide_serious", "traveler_neutral"],
+      "values": ["happy", "serious", "neutral"],
       "contexts": ["dialogue"]
     },
     "slot.left": {
@@ -463,11 +483,12 @@ Keep the sidecar keys aligned with the `DialogueMetadataProfile` assigned to tha
 
 ### Portraits
 
-1. Create/configure an `ImageKeyMapConfig`.
-2. Add every portrait key used by Ink and its Sprite.
-3. Assign the map to the relevant speaker views.
+1. Create a **Dialogue > Character Catalog** asset.
+2. Add one entry per stable character ID.
+3. Configure its display name, optional localized display name, default portrait, default animation, and character-scoped portrait variations.
+4. Assign the catalog to every relevant `SpeakerView`.
 
-Lookups are case-insensitive. A missing key produces a warning and no mapped sprite.
+Character and portrait lookups are case-insensitive. A missing character produces a warning and falls back to the character ID for display text. An unknown portrait override falls back to that character's default portrait.
 
 ### Typewriter audio
 
@@ -516,7 +537,8 @@ Common problems:
 | Symptom | Check |
 | --- | --- |
 | Raw Ink text appears instead of translation | `locale` key, table name, locale presenter, and table entry |
-| Portrait is empty | portrait key and `ImageKeyMapConfig` assignment |
+| Name falls back to character ID | character entry and display/localized name in `DialogueCharacterCatalog` |
+| Portrait is empty | character entry, portrait key, default portrait, and `DialogueCharacterCatalog` assignment |
 | Audio falls back to default | `audio` value and `DialogueAudioInfoSO.id` |
 | Layout does not change | Animator assignment and exact state name |
 | Character disappears in fixed mode | `slot.*` ID has a matching presenter slot/view |
@@ -558,11 +580,9 @@ Use `Participants` when game logic cares about semantic roles. Use `Presentation
 # slot.left:guide
 # slot.right:traveler
 # speaker:guide
-# speaker_name:Guide
-# portrait:guide_happy
+# portrait:happy
 # animation:Wave
 # listener:traveler
-# listener_name:Traveler
 # locale:dialogue.village.guide_hello
 # audio:guide
 # layout:TwoCharacter
@@ -570,7 +590,7 @@ Welcome to our village.
 
 # id:village_intro.traveler.reply
 # speaker:traveler
-# portrait:traveler_neutral
+# portrait:neutral
 # listener:guide
 # skip:enable
 Thank you. I only need directions.

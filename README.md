@@ -27,9 +27,11 @@ The sample uses direct component discovery and does not require a project-specif
 
 1. Add a `DialogueHandler` and its presenter components to a Canvas, or start from the sample prefab.
 2. Create a **Dialogue > Metadata Profile** asset and assign it to the handler.
-3. Add `DialogueTrigger` to a scene object, assign compiled Ink JSON, and optionally assign a per-story metadata profile.
-4. Call `DialogueTrigger.ShowDialogue()` from proximity, interaction, quest, or other game-owned code.
-5. Subscribe to `IDialogueHandler` events or use `DialogueEventListener` for game reactions.
+3. Create a **Dialogue > Character Catalog** asset, add every character ID used by the stories, and configure each character's display name, optional localized display name, portraits, and default animation.
+4. Assign that catalog to every `SpeakerView`. The old `ImageKeyMapConfig` is not supported; existing prefabs and assets must be configured again.
+5. Add `DialogueTrigger` to a scene object, assign compiled Ink JSON, and optionally assign a per-story metadata profile.
+6. Call `DialogueTrigger.ShowDialogue()` from proximity, interaction, quest, or other game-owned code.
+7. Subscribe to `IDialogueHandler` events or use `DialogueEventListener` for game reactions.
 
 `DialogueTrigger` supports SAS Core injection, an explicit handler reference, and scene lookup as a final fallback.
 
@@ -45,15 +47,15 @@ The sample uses direct component discovery and does not require a project-specif
 | Character placement mode | `placement` |
 | Character assigned to a visual slot | `slot.<slot-id>` |
 | Active speaker | `speaker` |
-| Speaker name | `speaker_name` |
-| Speaker portrait | `portrait` |
-| Speaker animation | `animation` |
+| Speaker name override | `speaker_name` |
+| Speaker portrait override | `portrait` |
+| Speaker animation override | `animation` |
 | Primary listener | `listener` |
-| Listener name | `listener_name` |
-| Listener portrait | `listener_portrait` |
-| Listener animation | `listener_animation` |
+| Listener name override | `listener_name` |
+| Listener portrait override | `listener_portrait` |
+| Listener animation override | `listener_animation` |
 
-Additional roles use `participant.<role>`, with optional `.name`, `.portrait`, and `.animation` fields. Unmapped `key:value` tags remain available through `DialogueLineContext.TryGetTagValue`. A `DialogueMetadataProfile` can map project-owned names such as `actor`, `face`, or `loc_key` onto the same runtime semantics.
+Additional roles use `participant.<role>`, with optional `.name`, `.portrait`, and `.animation` overrides. Character display names, localized names, default portraits, portrait variations, and default animations belong in a shared `DialogueCharacterCatalog`. Unmapped `key:value` tags remain available through `DialogueLineContext.TryGetTagValue`. A `DialogueMetadataProfile` can map project-owned names such as `actor`, `face`, or `loc_key` onto the same runtime semantics.
 
 The complete behavior, allowed values, setup requirements, choice syntax, and extension examples are documented in the [Dialogue Metadata Reference](Documentation~/MetadataReference.md).
 
@@ -89,8 +91,7 @@ For regular dialogue, place the contiguous metadata block immediately above the 
 ```ink
 # id:guide.welcome
 # speaker:guide
-# speaker_name:Guide
-# portrait:guide_happy
+# portrait:happy
 Welcome to the sample.
 ```
 

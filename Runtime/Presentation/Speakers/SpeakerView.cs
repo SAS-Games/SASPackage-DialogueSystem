@@ -1,6 +1,9 @@
+using System;
+using System.Collections.Generic;
 using SAS.Core.TagSystem;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Localization;
 using UnityEngine.UI;
 
 public class SpeakerView : MonoBehaviour
@@ -8,30 +11,34 @@ public class SpeakerView : MonoBehaviour
     [SerializeField] private TMP_Text m_DisplayNameText;
     [SerializeField] private Animator m_PortraitAnimator;
     [SerializeField] private Image m_Image;
-    [SerializeField] private ImageKeyMapConfig m_ImageKeyMapConfig;
+    [SerializeField] private DialogueCharacterCatalog m_CharacterCatalog;
     [SerializeField] private string m_DefaultAnimationState = "Idle";
     [FieldRequiresSelf] private IDialogueAnimationTarget _animationTarget;
+
+    private readonly HashSet<string> _reportedMissingCharacters = new(StringComparer.OrdinalIgnoreCase);
+    private LocalizedString _activeLocalizedDisplayName;
+    private LocalizedString.ChangeHandler _localizedDisplayNameHandler;
+    private int _displayNameVersion;
 
     void Awake()
     {
         this.Initialize();
     }
 
+    private void OnDisable()
+    {
+        CancelDisplayNameLocalization();
+    }
+
+    private void OnDestroy()
+    {
+        CancelDisplayNameLocalization();
+    }
+
     public void SetName(string name)
     {
         if (m_DisplayNameText != null)
             m_DisplayNameText.text = name;
-    }
-
-    public void SetImage(string spriteName)
-    {
-        if (string.IsNullOrWhiteSpace(spriteName) || m_ImageKeyMapConfig == null)
-        {
-            SetImage((Sprite)null);
-            return;
-        }
-
-        SetImage(m_ImageKeyMapConfig.GetImage(spriteName));
     }
 
     public void SetImage(Sprite sprite)
@@ -55,8 +62,7 @@ public class SpeakerView : MonoBehaviour
         if (participant == null)
             return;
 
-        ApplyParticipant(participant.CharacterId, participant.DisplayName, participant.PortraitKey,
-            participant.AnimationKey);
+        ApplyParticipant(participant.CharacterId, participant.DisplayName, participant.PortraitKey, participant.AnimationKey);
     }
 
     public void SetParticipant(DialoguePresentationParticipant participant)
@@ -71,21 +77,56 @@ public class SpeakerView : MonoBehaviour
     private void ApplyParticipant(string characterId, string displayName, string portraitKey,
         string animationKey)
     {
-        SetName(string.IsNullOrEmpty(displayName)
-            ? characterId
-            : displayName);
-        SetImage(string.IsNullOrEmpty(portraitKey)
-            ? characterId
-            : portraitKey);
-        SetAnimationState(string.IsNullOrEmpty(animationKey)
+        CancelDisplayNameLocalization();
+
+        DialogueCharacterDefinition character = null;
+        if (m_CharacterCatalog != null && !m_CharacterCatalog.TryGetCharacter(characterId, out character) &&
+            !string.IsNullOrWhiteSpace(characterId) && _reportedMissingCharacters.Add(characterId))
+        {
+            Debug.LogWarning($"Dialogue character '{characterId}' is not present in the assigned character catalog.", this);
+        }
+
+        if (!string.IsNullOrWhiteSpace(displayName))
+            SetName(displayName.Trim());
+        else if (character != null && character.HasLocalizedDisplayName)
+            BeginDisplayNameLocalization(character, characterId);
+        else
+            SetName(character != null && !string.IsNullOrEmpty(character.DisplayName)
+                ? character.DisplayName
+                : characterId);
+
+        SetImage(m_CharacterCatalog != null
+            ? m_CharacterCatalog.ResolvePortrait(characterId, portraitKey)
+            : null);
+
+        var resolvedAnimation = m_CharacterCatalog != null
+            ? m_CharacterCatalog.ResolveAnimation(characterId, animationKey)
+            : animationKey;
+        SetAnimationState(string.IsNullOrEmpty(resolvedAnimation)
             ? m_DefaultAnimationState
-            : animationKey);
+            : resolvedAnimation);
     }
 
-    internal void SetDisplayValues(string speakerTag, string animationState)
+    private void BeginDisplayNameLocalization(DialogueCharacterDefinition character, string characterId)
     {
-        SetName(speakerTag);
-        SetImage(speakerTag);
-        SetAnimationState(animationState);
+        SetName(!string.IsNullOrEmpty(character.DisplayName) ? character.DisplayName : characterId);
+        var version = _displayNameVersion;
+        _activeLocalizedDisplayName = character.LocalizedDisplayName;
+        _localizedDisplayNameHandler = localizedName =>
+        {
+            if (version == _displayNameVersion && !string.IsNullOrWhiteSpace(localizedName))
+                SetName(localizedName);
+        };
+        _activeLocalizedDisplayName.StringChanged += _localizedDisplayNameHandler;
+    }
+
+    private void CancelDisplayNameLocalization()
+    {
+        _displayNameVersion++;
+        if (_activeLocalizedDisplayName != null && _localizedDisplayNameHandler != null)
+            _activeLocalizedDisplayName.StringChanged -= _localizedDisplayNameHandler;
+
+        _activeLocalizedDisplayName = null;
+        _localizedDisplayNameHandler = null;
     }
 }

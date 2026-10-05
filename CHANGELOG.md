@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Replaced the flat `ImageKeyMapConfig` with `DialogueCharacterCatalog`.
+- This is an intentional breaking setup change: no legacy component or serialized-field compatibility is retained, so existing catalog assets and `SpeakerView` assignments must be recreated.
+- Added centralized display names, optional localized names, default portraits, character-scoped portrait variations, and default animations.
+- Kept participant name, portrait, and animation metadata as optional per-line overrides.
+- Added cached case-insensitive character and portrait lookup with duplicate and invalid-ID diagnostics.
+- Simplified the Basic Dialogue sample so ordinary lines no longer repeat participant name metadata.
+
 ## 0.3.0 - 2026-09-27
 
 - Added metadata-driven `follow-speaker` and persistent `fixed-character` placement modes.
