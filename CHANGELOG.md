@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Extended `DialogueTrigger` with automatic same-object and explicit story binding discovery.
+- Added the attribute-driven `InkStoryBinding`, `InkExternal`, and `InkVariable` APIs for project-owned Ink integration.
+- Added story asset/status accessors and trigger reset support to `DialogueTrigger`.
 - Replaced the flat `ImageKeyMapConfig` with `DialogueCharacterCatalog`.
 - This is an intentional breaking setup change: no legacy component or serialized-field compatibility is retained, so existing catalog assets and `SpeakerView` assignments must be recreated.
 - Added centralized display names, optional localized names, default portraits, character-scoped portrait variations, and default animations.

@@ -35,6 +35,23 @@ The sample uses direct component discovery and does not require a project-specif
 
 `DialogueTrigger` supports SAS Core injection, an explicit handler reference, and scene lookup as a final fallback.
 
+## Story-specific Ink bindings
+
+Add an `InkStoryBinding` subclass beside `DialogueTrigger` when a story needs game methods or initial variables. The trigger discovers it automatically; bindings on another object can be assigned through **Binding Sources**.
+
+```csharp
+public sealed class ShopInkBinding : InkStoryBinding
+{
+    [InkVariable("shop_item_price")]
+    [SerializeField] private int m_ItemPrice = 120;
+
+    [InkExternal("shop_coin_count")]
+    private int GetCoinCount() => 200;
+}
+```
+
+`InkExternal` exposes methods with zero to four parameters. `InkVariable` supports fields and readable, non-indexed properties. Omitting the attribute name uses the C# member name unchanged; explicit names are recommended when Ink uses snake_case.
+
 ## Metadata contract
 
 | Runtime value | Ink tag |
