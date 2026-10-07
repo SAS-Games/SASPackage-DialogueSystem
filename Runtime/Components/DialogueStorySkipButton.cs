@@ -8,8 +8,8 @@ namespace SAS.DialogueSystem
     public sealed class DialogueStorySkipButton : MonoBehaviour
     {
         [SerializeField] private Button m_Button;
-        [Tooltip("Optional visual root to hide while story skipping is unavailable.")] [SerializeField]
-        private GameObject m_VisualRoot;
+        [Tooltip("Optional visual root to hide while story skipping is unavailable.")]
+        [SerializeField] private GameObject m_VisualRoot;
 
         [SerializeField] private bool m_HideWhenUnavailable;
         [FieldRequiresParent] private DialogueHandler _dialogueHandler;

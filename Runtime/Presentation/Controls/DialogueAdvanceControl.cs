@@ -6,14 +6,14 @@ namespace SAS.DialogueSystem
 {
     public class DialogueAdvanceControl : MonoBehaviour
     {
-        [Tooltip("Visual displayed when the current line is ready to advance.")] [SerializeField]
-        private GameObject m_ReadyIndicator;
+        [Tooltip("Visual displayed when the current line is ready to advance.")] 
+        [SerializeField] private GameObject m_ReadyIndicator;
 
         [Tooltip("Optional button. When assigned, clicking reveals the current line or advances dialogue.")]
         [SerializeField] private Button m_Button;
 
-        [Tooltip("Allow the optional button to reveal a line that is still being presented.")] [SerializeField]
-        private bool m_CanRevealCurrentLine = true;
+        [Tooltip("Allow the optional button to reveal a line that is still being presented.")] 
+        [SerializeField] private bool m_CanRevealCurrentLine = true;
 
         [FieldRequiresParent] private DialogueHandler _dialogueHandler;
 
