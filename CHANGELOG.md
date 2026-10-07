@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added metadata-driven Unity Localization Smart String arguments for dialogue lines and choices.
+- Added typed `int`, `float`, `bool`, `string`, and nested `localized` argument support through repeatable `loc-arg` tags.
 - Extended `DialogueTrigger` with automatic same-object and explicit story binding discovery.
 - Added the attribute-driven `InkStoryBinding`, `InkExternal`, and `InkVariable` APIs for project-owned Ink integration.
 - Added story asset/status accessors and trigger reset support to `DialogueTrigger`.

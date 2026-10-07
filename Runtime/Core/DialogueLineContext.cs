@@ -28,6 +28,34 @@ public enum DialoguePlacementDirective
     FixedCharacter
 }
 
+public enum DialogueLocalizationArgumentType
+{
+    Integer,
+    Float,
+    Boolean,
+    String,
+    Localized
+}
+
+public sealed class DialogueLocalizationArgument
+{
+    internal DialogueLocalizationArgument(string name, DialogueLocalizationArgumentType type, object value = null,
+        string tableName = null, string entryKey = null)
+    {
+        Name = name ?? string.Empty;
+        Type = type;
+        Value = value;
+        TableName = tableName ?? string.Empty;
+        EntryKey = entryKey ?? string.Empty;
+    }
+
+    public string Name { get; }
+    public DialogueLocalizationArgumentType Type { get; }
+    public object Value { get; }
+    public string TableName { get; }
+    public string EntryKey { get; }
+}
+
 public sealed class DialogueMetadataDiagnostic
 {
     public DialogueMetadataDiagnostic(DialogueMetadataSeverity severity, string code, string message, string key = null)
@@ -94,6 +122,7 @@ public sealed class DialogueLineContext
     private readonly Dictionary<string, DialogueParticipant> _participantsByRole = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _slotAssignments = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<DialoguePresentationParticipant> _presentationParticipants = new();
+    private readonly List<DialogueLocalizationArgument> _localizationArguments = new();
     private readonly List<DialogueMetadataDiagnostic> _diagnostics = new();
     private readonly string _currentSpeakerRole;
     private readonly string _listenerRole;
@@ -112,6 +141,7 @@ public sealed class DialogueLineContext
     public IReadOnlyList<DialogueParticipant> Participants => _participants;
     public IReadOnlyDictionary<string, string> SlotAssignments => _slotAssignments;
     public IReadOnlyList<DialoguePresentationParticipant> PresentationParticipants => _presentationParticipants;
+    public IReadOnlyList<DialogueLocalizationArgument> LocalizationArguments => _localizationArguments;
     public IReadOnlyList<DialogueMetadataDiagnostic> Diagnostics => _diagnostics;
     public bool HasErrors => _diagnostics.Any(item => item.Severity == DialogueMetadataSeverity.Error);
     public string LineId { get; private set; } = string.Empty;
@@ -192,6 +222,23 @@ public sealed class DialogueLineContext
     {
         if (diagnostic != null)
             _diagnostics.Add(diagnostic);
+    }
+
+    internal bool SetLocalizationArgument(DialogueLocalizationArgument argument)
+    {
+        if (argument == null)
+            return true;
+
+        var index = _localizationArguments.FindIndex(item =>
+            item.Name.Equals(argument.Name, StringComparison.OrdinalIgnoreCase));
+        if (index < 0)
+        {
+            _localizationArguments.Add(argument);
+            return true;
+        }
+
+        _localizationArguments[index] = argument;
+        return false;
     }
 
     public bool HasTag(string key)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 public static class DialogueMetadataParser
@@ -15,7 +16,8 @@ public static class DialogueMetadataParser
         return lineContext;
     }
 
-    public static void Apply(DialogueLineContext lineContext, IEnumerable<string> rawTags, DialogueMetadataSchema schema)
+    public static void Apply(DialogueLineContext lineContext, IEnumerable<string> rawTags,
+        DialogueMetadataSchema schema)
     {
         if (lineContext == null)
             throw new ArgumentNullException(nameof(lineContext));
@@ -29,6 +31,7 @@ public static class DialogueMetadataParser
         }
 
         ApplyScalarMetadata(lineContext, schema);
+        ApplyLocalizationArguments(lineContext, schema.LocalizationArgumentTag);
         ApplySlotAssignments(lineContext, schema);
         ApplyParticipants(lineContext, schema);
         lineContext.ResolveRoleBasedPresentation();
@@ -42,6 +45,101 @@ public static class DialogueMetadataParser
         ApplyScalar(lineContext, schema.AudioTag, lineContext.SetAudioInfo, validateIdentifier: false);
         ApplyStorySkipDirective(lineContext, schema.StorySkipTag);
         ApplyPlacementDirective(lineContext, schema.PlacementTag);
+    }
+
+    private static void ApplyLocalizationArguments(DialogueLineContext lineContext, string key)
+    {
+        if (string.IsNullOrEmpty(key))
+            return;
+
+        foreach (var value in lineContext.GetTagValues(key))
+        {
+            if (!TryParseLocalizationArgument(value, out var argument, out var error))
+            {
+                lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Error, "invalid-localization-argument", error, key));
+                continue;
+            }
+
+            if (!lineContext.SetLocalizationArgument(argument))
+                lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Warning, "duplicate-localization-argument", $"Localization argument '{argument.Name}' occurs more than once; the final value is used.", key));
+        }
+    }
+
+    private static bool TryParseLocalizationArgument(string value, out DialogueLocalizationArgument argument, out string error)
+    {
+        argument = null;
+        error = string.Empty;
+        var fields = (value ?? string.Empty).Split(new[] { ',' }, 3, StringSplitOptions.None);
+        if (fields.Length < 3)
+        {
+            error = "Localization argument metadata must use 'name,type,value'.";
+            return false;
+        }
+
+        var name = fields[0].Trim();
+        var type = fields[1].Trim().ToLowerInvariant();
+        var rawValue = fields[2].Trim();
+        if (!DialogueMetadataSchema.IsValidRole(name))
+        {
+            error = $"Localization argument name '{name}' is invalid.";
+            return false;
+        }
+
+        switch (type)
+        {
+            case "int":
+            case "integer":
+                if (!int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
+                {
+                    error = $"Localization argument '{name}' must contain a valid integer.";
+                    return false;
+                }
+
+                argument = new DialogueLocalizationArgument(name, DialogueLocalizationArgumentType.Integer, intValue);
+                return true;
+
+            case "float":
+                if (!float.TryParse(rawValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var floatValue))
+                {
+                    error = $"Localization argument '{name}' must contain a valid invariant-culture float.";
+                    return false;
+                }
+
+                argument = new DialogueLocalizationArgument(name, DialogueLocalizationArgumentType.Float, floatValue);
+                return true;
+
+            case "bool":
+            case "boolean":
+                if (!bool.TryParse(rawValue, out var boolValue))
+                {
+                    error = $"Localization argument '{name}' must be 'true' or 'false'.";
+                    return false;
+                }
+
+                argument = new DialogueLocalizationArgument(name, DialogueLocalizationArgumentType.Boolean, boolValue);
+                return true;
+
+            case "string":
+                argument = new DialogueLocalizationArgument(name, DialogueLocalizationArgumentType.String, rawValue);
+                return true;
+
+            case "localized":
+                var reference = rawValue.Split(new[] { ',' }, 2, StringSplitOptions.None);
+                var tableName = reference.Length > 0 ? reference[0].Trim() : string.Empty;
+                var entryKey = reference.Length > 1 ? reference[1].Trim() : string.Empty;
+                if (string.IsNullOrEmpty(tableName) || string.IsNullOrEmpty(entryKey))
+                {
+                    error = $"Localized argument '{name}' must use 'name,localized,table,entry-key'.";
+                    return false;
+                }
+
+                argument = new DialogueLocalizationArgument(name, DialogueLocalizationArgumentType.Localized, tableName: tableName, entryKey: entryKey);
+                return true;
+
+            default:
+                error = $"Localization argument '{name}' uses unsupported type '{fields[1].Trim()}'.";
+                return false;
+        }
     }
 
     private static void ApplyStorySkipDirective(DialogueLineContext lineContext, string key)
@@ -93,7 +191,8 @@ public static class DialogueMetadataParser
             return;
         }
 
-        lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Warning, "invalid-placement-directive", $"Metadata '{key}' must be 'follow-speaker' or 'fixed-character'.", key));
+        lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Warning,
+            "invalid-placement-directive", $"Metadata '{key}' must be 'follow-speaker' or 'fixed-character'.", key));
     }
 
     private static void ApplySlotAssignments(DialogueLineContext lineContext, DialogueMetadataSchema schema)
@@ -106,7 +205,8 @@ public static class DialogueMetadataParser
             var slotId = key.Substring(schema.SlotPrefix.Length).Trim();
             if (!DialogueMetadataSchema.IsValidRole(slotId))
             {
-                lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Error, "invalid-slot-id", $"Metadata '{key}' must end with a valid slot ID.", key));
+                lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Error,
+                    "invalid-slot-id", $"Metadata '{key}' must end with a valid slot ID.", key));
                 continue;
             }
 
@@ -124,7 +224,8 @@ public static class DialogueMetadataParser
 
             if (!IsValidIdentifier(value))
             {
-                lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Error, "invalid-slot-character", $"Metadata '{key}' must contain a character ID or 'clear'.", key));
+                lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Error,
+                    "invalid-slot-character", $"Metadata '{key}' must contain a character ID or 'clear'.", key));
                 continue;
             }
 
@@ -173,7 +274,7 @@ public static class DialogueMetadataParser
             {
                 if (!TryParseGenericParticipantKey(key, generic, out var role, out var field))
                 {
-                    if (key.StartsWith(generic.Prefix, StringComparison.OrdinalIgnoreCase))
+                    if (key.StartsWith(generic.Prefix, StringComparison.OrdinalIgnoreCase)) 
                         lineContext.AddDiagnostic(new DialogueMetadataDiagnostic(DialogueMetadataSeverity.Error, "invalid-participant-field", $"Participant metadata '{key}' is not a supported participant field.", key));
 
                     continue;
@@ -332,7 +433,9 @@ public static class DialogueMetadataParser
 
     private readonly struct ParticipantDefinition
     {
-        public ParticipantDefinition(DialogueParticipantTagSchema schema) : this(schema.Role, schema.IdTag, schema.NameTag, schema.PortraitTag, schema.AnimationTag) { }
+        public ParticipantDefinition(DialogueParticipantTagSchema schema) : this(schema.Role, schema.IdTag, schema.NameTag, schema.PortraitTag, schema.AnimationTag)
+        {
+        }
 
         public ParticipantDefinition(string role, string idKey, string nameKey, string portraitKey, string animationKey)
         {

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using SAS.DialogueSystem;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -11,7 +13,7 @@ public class ChoiceView : MonoBehaviour
     [SerializeField] private TMP_Text m_Text;
     [SerializeField] private string m_LocalizedTableName = "DialogueTextTable";
     private UnityAction _boundSelectedAction;
-    private LocalizedString _activeLocalizedString;
+    private DialogueLocalizedStringHandle _activeLocalization;
     private LocalizedString.ChangeHandler _localizedStringHandler;
     private int _localizationVersion;
 
@@ -37,10 +39,16 @@ public class ChoiceView : MonoBehaviour
 
     public void SetLocalText(string id)
     {
-        SetLocalText(id, string.Empty);
+        SetLocalText(id, string.Empty, null);
     }
 
     public void SetLocalText(string id, string fallbackText)
+    {
+        SetLocalText(id, fallbackText, null);
+    }
+
+    public void SetLocalText(string id, string fallbackText,
+        IReadOnlyList<DialogueLocalizationArgument> localizationArguments)
     {
         if (string.IsNullOrEmpty(id))
         {
@@ -51,13 +59,14 @@ public class ChoiceView : MonoBehaviour
         CancelLocalization();
         ApplyText(fallbackText);
         var version = _localizationVersion;
-        _activeLocalizedString = new LocalizedString(m_LocalizedTableName, id);
+        _activeLocalization = new DialogueLocalizedStringHandle(m_LocalizedTableName, id,
+            localizationArguments);
         _localizedStringHandler = localizedText =>
         {
             if (version == _localizationVersion)
                 ApplyText(localizedText);
         };
-        _activeLocalizedString.StringChanged += _localizedStringHandler;
+        _activeLocalization.Reference.StringChanged += _localizedStringHandler;
     }
 
     public void BindSelectedEvent(UnityAction<int> action, int parameter)
@@ -83,11 +92,11 @@ public class ChoiceView : MonoBehaviour
     private void CancelLocalization()
     {
         _localizationVersion++;
-        if (_activeLocalizedString != null && _localizedStringHandler != null)
-            _activeLocalizedString.StringChanged -= _localizedStringHandler;
+        if (_activeLocalization != null && _localizedStringHandler != null)
+            _activeLocalization.Reference.StringChanged -= _localizedStringHandler;
 
-        (_activeLocalizedString as IDisposable)?.Dispose();
-        _activeLocalizedString = null;
+        _activeLocalization?.Dispose();
+        _activeLocalization = null;
         _localizedStringHandler = null;
     }
 }

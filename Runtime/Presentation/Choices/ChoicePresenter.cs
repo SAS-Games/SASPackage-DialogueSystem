@@ -68,7 +68,7 @@ namespace SAS.DialogueSystem
         {
             var locale = option.LineContext?.Locale;
             if (!string.IsNullOrEmpty(locale))
-                view.SetLocalText(locale, option.Choice.text);
+                view.SetLocalText(locale, option.Choice.text, option.LineContext.LocalizationArguments);
             else
                 view.SetText(option.Choice.text);
 

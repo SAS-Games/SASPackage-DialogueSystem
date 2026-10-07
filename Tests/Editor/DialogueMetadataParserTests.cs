@@ -80,6 +80,49 @@ namespace SAS.DialogueSystem.Tests
         }
 
         [Test]
+        public void LocalizationArgumentsAreParsedWithRuntimeTypes()
+        {
+            var line = DialogueMetadataParser.ParseLine(
+                "Localized fallback.",
+                new[]
+                {
+                    "locale:quest.reward", "loc-arg:reward,int,250", "loc-arg:ratio,float,1.5",
+                    "loc-arg:available,bool,true", "loc-arg:player,string,Ada, Jr.",
+                    "loc-arg:item,localized,Items,item.moonbloom_oil.name"
+                },
+                DialogueMetadataSchema.Canonical);
+
+            Assert.AreEqual(5, line.LocalizationArguments.Count);
+            Assert.AreEqual(250, line.LocalizationArguments.Single(item => item.Name == "reward").Value);
+            Assert.AreEqual(1.5f, line.LocalizationArguments.Single(item => item.Name == "ratio").Value);
+            Assert.AreEqual(true, line.LocalizationArguments.Single(item => item.Name == "available").Value);
+            Assert.AreEqual("Ada, Jr.", line.LocalizationArguments.Single(item => item.Name == "player").Value);
+            var localizedItem = line.LocalizationArguments.Single(item => item.Name == "item");
+            Assert.AreEqual(DialogueLocalizationArgumentType.Localized, localizedItem.Type);
+            Assert.AreEqual("Items", localizedItem.TableName);
+            Assert.AreEqual("item.moonbloom_oil.name", localizedItem.EntryKey);
+            Assert.IsFalse(line.HasErrors);
+        }
+
+        [Test]
+        public void InvalidLocalizationArgumentsAreRejectedAndDuplicatesUseFinalValue()
+        {
+            var line = DialogueMetadataParser.ParseLine(
+                "Localized fallback.",
+                new[]
+                {
+                    "loc-arg:reward,int,100", "loc-arg:reward,int,250",
+                    "loc-arg:broken,int,nope", "loc-arg:item,localized,Items"
+                },
+                DialogueMetadataSchema.Canonical);
+
+            Assert.AreEqual(250, line.LocalizationArguments.Single(item => item.Name == "reward").Value);
+            Assert.IsTrue(line.Diagnostics.Any(item => item.Code == "duplicate-localization-argument"));
+            Assert.AreEqual(2, line.Diagnostics.Count(item => item.Code == "invalid-localization-argument"));
+            Assert.IsTrue(line.HasErrors);
+        }
+
+        [Test]
         public void PlacementAndSlotMetadataAreParsedAndValidated()
         {
             var line = DialogueMetadataParser.ParseLine(

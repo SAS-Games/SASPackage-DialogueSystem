@@ -58,6 +58,7 @@ public sealed class ShopInkBinding : InkStoryBinding
 | --- | --- |
 | Line ID | `id` |
 | Localization key | `locale` |
+| Smart String runtime argument | `loc-arg` |
 | Layout animation | `layout` |
 | Audio profile | `audio` |
 | Story skip permission | `skip` |

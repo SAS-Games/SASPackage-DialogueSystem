@@ -36,6 +36,7 @@ For a choice, put metadata inside the visible choice brackets. This is necessary
 | --- | --- | --- | --- | --- |
 | `id` | Stable identifier | Stored as `DialogueLineContext.LineId` | Dialogue or choice | None; subscribe to context events if the game uses it |
 | `locale` | Localization entry key | Replaces raw Ink text through `DialogueLocaleTextPresenter` | Dialogue or choice | Unity Localization string table and locale presenter |
+| `loc-arg` | `name,type,value` | Binds a runtime value to a Unity Localization Smart String | Dialogue or choice with `locale` | Mark the string-table entry as Smart |
 | `layout` | Animator state name | Plays a dialogue UI layout state | Dialogue | `DialogueLayoutAnimator` and matching Animator state |
 | `audio` | Typewriter audio profile ID | Selects per-character typing audio | Dialogue | `TypewriterEffect`, `AudioSource`, and matching audio info asset |
 | `skip` | `enable` or `disable` | Changes whether the rest of the story may be skipped | Dialogue | Optional `DialogueStorySkipButton` or custom control |
@@ -98,6 +99,56 @@ Game setup:
 4. Use `DialogueLocaleTextPresenter` instead of only `DialogueTextPresenter`.
 
 The key follows the same identifier rules as `id`.
+
+### `loc-arg` - Smart String runtime arguments
+
+Use `loc-arg` with `locale` when a localized line contains values known only while the story is running. The tag is repeatable and uses `name,type,value`:
+
+```ink
+~ temp reward = kael_last_reward()
+
+# locale:kael.delivery.clean.reward
+# loc-arg:reward,int,{reward}
+You made good time. Here's your payment: {reward} Coins.
+```
+
+Ink evaluates expressions inside tags. If `reward` is 250, the runtime receives `loc-arg:reward,int,250`. In the Unity string table, mark the entry as **Smart** and use the same argument name:
+
+```text
+You made good time. Here's your payment: {reward} Coins.
+```
+
+Supported forms are:
+
+| Type | Syntax | Use |
+| --- | --- | --- |
+| Integer | `# loc-arg:reward,int,{reward}` | Counts, rewards, levels |
+| Float | `# loc-arg:ratio,float,{ratio}` | Runtime decimal values; Ink must emit invariant-culture syntax |
+| Boolean | `# loc-arg:available,bool,{available}` | Smart String conditions |
+| String | `# loc-arg:playerName,string,{player_name}` | Player-entered or already-localized text |
+| Localized reference | `# loc-arg:item,localized,Items,{item_key}` | Item, skill, quest, or other reusable localized names |
+
+A localized reference contains both the Unity string-table collection and entry key. Keep the Ink/C# value stable and language-independent:
+
+```ink
+VAR requested_item_key = "item.moonbloom_oil.name"
+
+# locale:kael.first.need_oil
+# loc-arg:item,localized,Items,{requested_item_key}
+I need Moonbloom Oil for my weapon.
+```
+
+The `DialogueTextTable` entry can then contain `I need {item} for my weapon.` while `Items/item.moonbloom_oil.name` supplies the item name for the active locale. Do not pass an English item name as a `string` argument when the item itself requires translation.
+
+Argument names must start with a letter and contain only letters, numbers, underscores, or hyphens. Names are matched case-insensitively by the dialogue metadata layer. Invalid types and values are metadata errors; duplicate names produce a warning and the final value is used.
+
+For choices, keep both tags inside the visible brackets so Ink exposes them before selection:
+
+```ink
+* [Give the item # locale:kael.choice.give # loc-arg:item,localized,Items,{requested_item_key}] -> give_item
+```
+
+No per-quest C# integration is required. `DialogueLocaleTextPresenter` and the default choice UI bind parsed arguments automatically. The only Unity content requirement is that entries using placeholders are marked Smart.
 
 ### `layout` ? dialogue UI layout state
 
@@ -508,6 +559,7 @@ Character and portrait lookups are case-insensitive. A missing character produce
 1. Configure Unity Localization and the string table collection.
 2. Use `DialogueLocaleTextPresenter`.
 3. Ensure every `locale` value exists in the configured table.
+4. For runtime placeholders, add `loc-arg` tags in Ink and mark the corresponding table entries as Smart.
 
 ### Story skipping
 
@@ -537,6 +589,8 @@ Common problems:
 | Symptom | Check |
 | --- | --- |
 | Raw Ink text appears instead of translation | `locale` key, table name, locale presenter, and table entry |
+| `{reward}` or another placeholder appears literally | mark the table entry as Smart and add a matching `loc-arg` tag |
+| An item name appears in the wrong language | use the `localized` argument type with an item table/key instead of `string` |
 | Name falls back to character ID | character entry and display/localized name in `DialogueCharacterCatalog` |
 | Portrait is empty | character entry, portrait key, default portrait, and `DialogueCharacterCatalog` assignment |
 | Audio falls back to default | `audio` value and `DialogueAudioInfoSO.id` |
@@ -555,6 +609,7 @@ The most useful `DialogueLineContext` members are:
 | --- | --- |
 | `LineId` | Parsed `id` |
 | `Locale` | Parsed localization key |
+| `LocalizationArguments` | Typed Smart String arguments parsed from repeated `loc-arg` tags |
 | `LayoutAnim` | Parsed layout state |
 | `AudioInfoId` | Parsed typewriter audio ID |
 | `StorySkipDirective` | Directive on this line |

@@ -9,7 +9,7 @@ namespace SAS.DialogueSystem
     {
         [SerializeField] private string m_LocalizedTableName = "DialogueTextTable";
         private DialogueLineContext _pendingLocalizedLine;
-        private LocalizedString _activeLocalizedString;
+        private DialogueLocalizedStringHandle _activeLocalization;
         private LocalizedString.ChangeHandler _localizedStringHandler;
         private int _localizationVersion;
 
@@ -47,9 +47,10 @@ namespace SAS.DialogueSystem
             CancelLocalization();
             _pendingLocalizedLine = lineContext;
             var version = _localizationVersion;
-            _activeLocalizedString = new LocalizedString(m_LocalizedTableName, lineContext.Locale);
+            _activeLocalization = new DialogueLocalizedStringHandle(m_LocalizedTableName, lineContext.Locale,
+                lineContext.LocalizationArguments);
             _localizedStringHandler = localizedText => HandleLocalizedString(version, lineContext, localizedText);
-            _activeLocalizedString.StringChanged += _localizedStringHandler;
+            _activeLocalization.Reference.StringChanged += _localizedStringHandler;
         }
 
         private void HandleLocalizedString(int version, DialogueLineContext lineContext, string localizedText)
@@ -68,11 +69,11 @@ namespace SAS.DialogueSystem
         {
             _localizationVersion++;
             _pendingLocalizedLine = null;
-            if (_activeLocalizedString != null && _localizedStringHandler != null)
-                _activeLocalizedString.StringChanged -= _localizedStringHandler;
+            if (_activeLocalization != null && _localizedStringHandler != null)
+                _activeLocalization.Reference.StringChanged -= _localizedStringHandler;
 
-            (_activeLocalizedString as IDisposable)?.Dispose();
-            _activeLocalizedString = null;
+            _activeLocalization?.Dispose();
+            _activeLocalization = null;
             _localizedStringHandler = null;
         }
     }

@@ -49,6 +49,7 @@ public sealed class DialogueMetadataProfile : ScriptableObject
     private string m_LineIdTag = "id";
 
     [SerializeField] private string m_LocalizationTag = "locale";
+    [SerializeField] private string m_LocalizationArgumentTag = "loc-arg";
     [SerializeField] private string m_LayoutTag = "layout";
     [SerializeField] private string m_AudioTag = "audio";
     [SerializeField] private string m_StorySkipTag = "skip";
@@ -76,12 +77,16 @@ public sealed class DialogueMetadataProfile : ScriptableObject
 
     public DialogueMetadataSchema GetSchema()
     {
+        var localizationArgumentTag = string.IsNullOrWhiteSpace(m_LocalizationArgumentTag)
+            ? "loc-arg"
+            : m_LocalizationArgumentTag;
         return _cachedSchema ??= new DialogueMetadataSchema(m_LineIdTag, m_LocalizationTag, m_LayoutTag,
             m_AudioTag, m_CurrentSpeakerRole, m_ListenerRole, (m_Participants ?? new List<DialogueParticipantTagBinding>())
                 .Where(binding => binding != null)
                 .Select(binding => binding.BuildSchema()),
             (m_GenericParticipants ?? new DialogueGenericParticipantTagBinding()).BuildSchema(),
-            m_StorySkipTag, m_PlacementTag, m_SlotPrefix, m_AutoPlacementSlots);
+            m_StorySkipTag, m_PlacementTag, m_SlotPrefix, m_AutoPlacementSlots,
+            localizationArgumentTag);
     }
 
     private void OnValidate()
@@ -138,10 +143,12 @@ public sealed class DialogueMetadataSchema
     public DialogueMetadataSchema(string lineIdTag, string localizationTag, string layoutTag, string audioTag,
         string currentSpeakerRole, string listenerRole, IEnumerable<DialogueParticipantTagSchema> participants,
         DialogueGenericParticipantTagSchema genericParticipants = null, string storySkipTag = "skip",
-        string placementTag = "placement", string slotPrefix = "slot.", IEnumerable<string> autoPlacementSlots = null)
+        string placementTag = "placement", string slotPrefix = "slot.", IEnumerable<string> autoPlacementSlots = null,
+        string localizationArgumentTag = "loc-arg")
     {
         LineIdTag = Trim(lineIdTag);
         LocalizationTag = Trim(localizationTag);
+        LocalizationArgumentTag = Trim(localizationArgumentTag);
         LayoutTag = Trim(layoutTag);
         AudioTag = Trim(audioTag);
         StorySkipTag = Trim(storySkipTag);
@@ -167,6 +174,7 @@ public sealed class DialogueMetadataSchema
     public static DialogueMetadataSchema Canonical => CanonicalSchema.Value;
     public string LineIdTag { get; }
     public string LocalizationTag { get; }
+    public string LocalizationArgumentTag { get; }
     public string LayoutTag { get; }
     public string AudioTag { get; }
     public string StorySkipTag { get; }
@@ -198,6 +206,7 @@ public sealed class DialogueMetadataSchema
         var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var error in ValidateOptionalTag(LineIdTag, "Line ID", tags)) yield return error;
         foreach (var error in ValidateOptionalTag(LocalizationTag, "Localization", tags)) yield return error;
+        foreach (var error in ValidateOptionalTag(LocalizationArgumentTag, "Localization argument", tags)) yield return error;
         foreach (var error in ValidateOptionalTag(LayoutTag, "Layout", tags)) yield return error;
         foreach (var error in ValidateOptionalTag(AudioTag, "Audio", tags)) yield return error;
         foreach (var error in ValidateOptionalTag(StorySkipTag, "Story skip", tags)) yield return error;
@@ -307,6 +316,6 @@ public sealed class DialogueMetadataSchema
                 new DialogueParticipantTagSchema("listener", "listener", "listener_name", "listener_portrait", "listener_animation")
             },
             new DialogueGenericParticipantTagSchema(true, "participant.", ".name", ".portrait", ".animation"),
-            "skip", "placement", "slot.", new[] { "left", "right", "center" });
+            "skip", "placement", "slot.", new[] { "left", "right", "center" }, "loc-arg");
     }
 }
