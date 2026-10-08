@@ -9,17 +9,15 @@ using UnityEngine.Serialization;
 public class DialogueTrigger : MonoBehaviour
 {
     [Inject] private IDialogueHandler _dialogueHandler;
-
+    [SerializeField] private SerializableInterface<IContextBinder> m_ContextBinder;
     [Tooltip("Optional direct reference. When empty, SAS Core injection is used first, then the scene is searched.")]
-    [SerializeField]
-    private DialogueHandler m_DialogueHandler;
+    [SerializeField] private DialogueHandler m_DialogueHandler;
 
     [Header("Ink JSON")] [FormerlySerializedAs("inkJSON")] [SerializeField]
     private TextAsset m_InkJSON;
 
     [Tooltip("Optional per-story tag mapping. The dialogue handler default is used when this is empty.")]
-    [SerializeField]
-    private DialogueMetadataProfile m_MetadataProfile;
+    [SerializeField] private DialogueMetadataProfile m_MetadataProfile;
 
     [Header("Ink Bindings")]
     [Tooltip("Optional binding components from this or another GameObject. InkStoryBinding components on this GameObject are discovered automatically.")]
@@ -59,9 +57,12 @@ public class DialogueTrigger : MonoBehaviour
 
         if (_dialogueHandler == null)
         {
-            Debug.LogWarning("DialogueTrigger cannot show dialogue because no dialogue handler is bound.", this);
-            return;
-        }
+             if (!m_ContextBinder.Value.TryGet(out _dialogueHandler))
+             {
+                 Debug.LogWarning("DialogueTrigger cannot show dialogue because no dialogue handler is bound.", this);
+                 return;
+             }
+         }
 
         if (m_InkJSON == null)
         {
